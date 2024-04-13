@@ -40,16 +40,11 @@ jobs:
         if: github.event.schedule 
         #if: "${{ inputs.version == '' }}"
         run: echo version=$(curl 'https://api.github.com/repos/standardnotes/app/git/matching-refs/tags/@standardnotes/web@' |jq -r 'last | .ref | split("@") |last')  >> $GITHUB_OUTPUT
-      - name: set lower case owner name
-        run: |
-          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
-        env:
-          OWNER: '${{ github.repository_owner }}'
       - name: Check Tag if exists
         id: check
         # https://stackoverflow.com/questions/32113330/check-if-imagetag-combination-already-exists-on-docker-hub
         # and swap the return code
-        run: docker manifest inspect ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.PACKAGE }}:${{ inputs.version || steps.cron.outputs.version }} > /dev/null && echo "exists=1" >> $GITHUB_OUTPUT || echo "exists=0" >> $GITHUB_OUTPUT
+        run: docker manifest inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:${{ inputs.version || steps.cron.outputs.version }} > /dev/null && echo "exists=1" >> $GITHUB_OUTPUT || echo "exists=0" >> $GITHUB_OUTPUT
       - name: Build and push
         if: ${{ steps.check.outputs.exists == '0' }}
         uses: docker/build-push-action@v3
@@ -59,7 +54,7 @@ jobs:
           build-args: STANDARDNOTES_WEB_VERSION=${{ inputs.version || steps.cron.outputs.version }}
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.PACKAGE }}:${{ inputs.version || steps.cron.outputs.version }},${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:${{ inputs.version || steps.cron.outputs.version }},${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:latest
       # TODO: cleanup old image
       #  keep last 2
       # Get tags -> curl -H "Authorization: Bearer " https://${{ env.REGISTRY }}/v2/${{ github.repository_owner }}/${{ env.PACKAGE }}/tags/list | jq -r "del( .tags [-2:] ) | .tags[]" | xargs -n 1   curl -H "Authorization: Bearer " -X DELETE  https://${{ env.REGISTRY }}/v2/${{ github.repository_owner }}/${{ env.PACKAGE }}/manifests/<digest>
