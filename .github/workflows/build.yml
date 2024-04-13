@@ -23,6 +23,11 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: set lower case owner name
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
       - uses: actions/checkout@v3
       - name: Set up Docker Buildx
         id: buildx
@@ -48,13 +53,14 @@ jobs:
       - name: Build and push
         if: ${{ steps.check.outputs.exists == '0' }}
         uses: docker/build-push-action@v3
+
         with:
           context: .
           file: ./Dockerfile
           build-args: STANDARDNOTES_WEB_VERSION=${{ inputs.version || steps.cron.outputs.version }}
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:${{ inputs.version || steps.cron.outputs.version }},${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:latest
+          tags: ${{ env.REGISTRY }}/${{ OWNER_LC }}/${{ env.PACKAGE }}:${{ inputs.version || steps.cron.outputs.version }},${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.PACKAGE }}:latest
       # TODO: cleanup old image
       #  keep last 2
       # Get tags -> curl -H "Authorization: Bearer " https://${{ env.REGISTRY }}/v2/${{ github.repository_owner }}/${{ env.PACKAGE }}/tags/list | jq -r "del( .tags [-2:] ) | .tags[]" | xargs -n 1   curl -H "Authorization: Bearer " -X DELETE  https://${{ env.REGISTRY }}/v2/${{ github.repository_owner }}/${{ env.PACKAGE }}/manifests/<digest>
